@@ -3,6 +3,7 @@ using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 using SchoolNewspaperBlazorApp.Interfaces.Service;
 using SchoolNewspaperBlazorApp.Repository;
+using Microsoft.AspNetCore.Identity;
 
 namespace SchoolNewspaperBlazorApp.Service
 {
@@ -15,20 +16,37 @@ namespace SchoolNewspaperBlazorApp.Service
         }
         public async Task AddUserAsync(string login, string password, string email)
         {
+            var hasher = new PasswordHasher<string>();
+            string passwordHash = hasher.HashPassword(null!, password);
             var auth = new User
             {
                Login = login,
-               Password = password,
+               Password = passwordHash,
                Email = email,
                RegisterDate = DateTime.Now
             };
             await _authRepository.AddUserAsync(auth);
         }
-        public async Task<bool> CheckIfRegisteredAsync(string login,string password)
+        public async Task<bool> CheckIfRegisteredAsync(string login, string password)
         {
-            return await _authRepository.CheckIfRegisteredAsync(login, password);
+            var hasher = new PasswordHasher<string>();
+            try
+            {
+                var dbPass = await _authRepository.CheckIfRegisteredAsync(login);
+                var result = hasher.VerifyHashedPassword(login, dbPass, password);
+                if(result == PasswordVerificationResult.Success)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
-
-
     }
 }
